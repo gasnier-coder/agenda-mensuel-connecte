@@ -7,8 +7,8 @@
   
   <!-- Liaison PWA Manifest & Icônes -->
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="icon" type="image/jpeg" sizes="192x192" href="icon-192.jpg">
+  <link rel="apple-touch-icon" href="icon-192.jpg">
 
   <script src="https://cdn.tailwindcss.com"></script>
 
@@ -228,12 +228,14 @@
 
     function renderCalendar() {
       const grid = document.getElementById('calendar-grid');
+      if (!grid) return;
       grid.innerHTML = '';
 
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
 
-      document.getElementById('current-month-title').innerText = `${monthNames[month]} ${year}`;
+      const titleEl = document.getElementById('current-month-title');
+      if (titleEl) titleEl.innerText = `${monthNames[month]} ${year}`;
 
       const holidays = getFrenchHolidays(year);
 
@@ -275,11 +277,12 @@
           bgStyle = 'bg-purple-950/30';
         }
 
-        dayCell.className = `rounded-lg p-2 border-2 cursor-pointer flex flex-col justify-between transition-colors overflow-hidden ${bgStyle} ${borderStyle}`;
+        // On ajoute 'relative' pour caler le badge centré en position absolue
+        dayCell.className = `rounded-lg p-2 border-2 cursor-pointer flex flex-col justify-between transition-colors overflow-hidden relative ${bgStyle} ${borderStyle}`;
 
         // En-tête de la case (Numéro du jour)
         const dayHeader = document.createElement('div');
-        dayHeader.className = "flex justify-between items-start";
+        dayHeader.className = "flex justify-between items-start z-10";
         
         let numberClasses = "text-xl md:text-2xl font-black ";
         if (isToday) {
@@ -290,31 +293,31 @@
           numberClasses += "text-white";
         }
 
-        let headerHTML = `<span class="${numberClasses}">${day}</span>`;
-        dayHeader.innerHTML = headerHTML;
+        dayHeader.innerHTML = `<span class="${numberClasses}">${day}</span>`;
         dayCell.appendChild(dayHeader);
 
         if (holidayName) {
           const holSpan = document.createElement('div');
-          holSpan.className = "text-[10px] md:text-xs font-bold text-[#FF77FF] truncate uppercase tracking-tight";
+          holSpan.className = "text-[10px] md:text-xs font-bold text-[#FF77FF] truncate uppercase tracking-tight z-10";
           holSpan.innerText = holidayName;
           dayCell.appendChild(holSpan);
         }
 
-// Compteur de RDV plus petit et strictement centré au milieu de la case
+        // Compteur de RDV petit et strictement centré au milieu de la case
         const dayEvents = events[dateStr] || [];
-        const centerContainer = document.createElement('div');
-        centerContainer.className = "absolute inset-0 flex items-center justify-center pointer-events-none";
-
         if (dayEvents.length > 0) {
+          const centerContainer = document.createElement('div');
+          centerContainer.className = "absolute inset-0 flex items-center justify-center pointer-events-none z-0";
+
           const badge = document.createElement('div');
           badge.className = "bg-[#00E5FF] text-black font-black text-xs md:text-sm px-2 py-0.5 rounded-md shadow-md border border-black/30";
           badge.innerText = `${dayEvents.length} RDV`;
+          
           centerContainer.appendChild(badge);
+          dayCell.appendChild(centerContainer);
         }
 
-        dayCell.classList.add('relative');
-        dayCell.appendChild(centerContainer);
+        grid.appendChild(dayCell);
       }
     }
 
