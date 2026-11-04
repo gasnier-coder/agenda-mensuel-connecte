@@ -4,7 +4,7 @@ const urlsToCache = [
   './manifest.json'
 ];
 
-// Installation : on met en cache le minimum vital sans tout bloquer si une image manque
+// Installation
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -30,12 +30,21 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
-// Interception des requêtes
+// Interception des requêtes avec gestion propre du réseau
 self.addEventListener('fetch', (e) => {
+  // On ne gère que les requêtes GET pour éviter les conflits avec Firebase (WebSocket/POST)
+  if (e.request.method !== 'GET') return;
+
   e.respondWith(
-    caches.match(e.request).then((response) => {
-      return response || fetch(e.request).catch(() => {
-        // Optionnel : renvoyer une page de secours hors-ligne si besoin
+    caches.match(e.request).then((cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return fetch(e.request).then((networkResponse) => {
+        return networkResponse;
+      }).catch(() => {
+        // En cas d'échec réseau total, on renvoie une réponse vide ou du cache si dispo
+        return new Response('Hors-ligne', { status: 503, statusText: 'Service Unavailable' });
       });
     })
   );
