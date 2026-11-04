@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agenda Senior - GASNIER TECH</title>
+  
+  <!-- Liaison PWA Manifest & Icônes -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- SDK Firebase JS (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+  <style>
+    /* Verrouillage strict de l'écran sans aucun scroll */
+    html, body {
+      height: 100vh;
+      max-height: 100vh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #121212;
+      color: #FFFFFF;
+      font-family: system-ui, -apple-system, sans-serif;
+      user-select: none;
+    }
+
+    /* Grille mensuelle adaptative */
+    .grid-month {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      height: 100%;
+    }
+
+    .grid-rows-5 { grid-template-rows: repeat(5, 1fr); }
+    .grid-rows-6 { grid-template-rows: repeat(6, 1fr); }
+
+    /* Utilitaires visuels */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden p-2">
+
+  <!-- En-tête (Header) avec ton Logo -->
+  <header class="flex items-center justify-between bg-black/70 border-2 border-[#00E5FF] rounded-xl px-4 py-2 mb-2 shrink-0">
+    
+    <!-- Zone Logo -->
+    <div class="flex items-center gap-4">
+      <div class="border-2 border-[#00FF66] bg-black px-2 py-1 rounded-lg flex items-center justify-center shadow-[0_0_10px_rgba(0,255,102,0.3)] h-12">
+        <!-- Remplace 'logo.png' par le nom de ton fichier logo dans le dossier -->
+        <img src="logo.png" alt="GASNIER TECH" class="max-h-10 object-contain" onerror="this.style.display='none'; document.getElementById('fallback-logo').style.display='flex';">
+        <div id="fallback-logo" class="hidden flex-col justify-center items-center px-2">
+          <span class="text-sm font-black text-[#00FF66] tracking-widest leading-none">GASNIER</span>
+          <span class="text-[10px] font-bold text-[#00E5FF] tracking-widest leading-none mt-1">TECH</span>
+        </div>
+      </div>
+      <h1 class="text-2xl md:text-3xl font-extrabold text-[#00FF66] tracking-wide" id="current-month-title">
+        CHARGEMENT...
+      </h1>
+    </div>
+
+    <!-- Navigation & Bouton Aujourd'hui -->
+    <div class="flex items-center gap-2 md:gap-4">
+      <button onclick="changeMonth(-1)" class="bg-gray-800 hover:bg-gray-700 text-[#00E5FF] border-2 border-[#00E5FF] text-xl md:text-2xl font-black px-4 py-1.5 rounded-xl active:scale-95 transition-transform">
+        &#9664; MOIS PRÉCÉDENT
+      </button>
+      
+      <button onclick="goToToday()" class="bg-[#FF0055] hover:bg-red-600 text-white font-black text-lg md:text-xl px-5 py-2 rounded-xl shadow-lg border-2 border-white active:scale-95 transition-transform">
+        AUJOURD'HUI
+      </button>
+
+      <button onclick="changeMonth(1)" class="bg-gray-800 hover:bg-gray-700 text-[#00E5FF] border-2 border-[#00E5FF] text-xl md:text-2xl font-black px-4 py-1.5 rounded-xl active:scale-95 transition-transform">
+        MOIS SUIVANT &#9654;
+      </button>
+    </div>
+  </header>
+
+  <!-- En-tête des jours de la semaine -->
+  <div class="grid grid-cols-7 gap-1 text-center font-black text-lg md:text-xl text-[#FFE600] bg-gray-900 py-1.5 rounded-lg border border-gray-800 mb-1 shrink-0">
+    <div>LUN</div>
+    <div>MAR</div>
+    <div>MER</div>
+    <div>JEU</div>
+    <div>VEN</div>
+    <div>SAM</div>
+    <div>DIM</div>
+  </div>
+
+  <!-- Conteneur principal de la Grille Mensuelle (100% de la hauteur restante) -->
+  <main class="flex-1 min-h-0 w-full relative">
+    <div id="calendar-grid" class="grid-month gap-1 h-full w-full">
+      <!-- Injection dynamique des jours -->
+    </div>
+  </main>
+
+  <!-- Modale Détails / Ajout de Rendez-vous -->
+  <div id="day-modal" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-gray-900 border-4 border-[#00FF66] rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col p-6 shadow-2xl">
+      
+      <!-- Titre Modale -->
+      <div class="flex justify-between items-center border-b-2 border-gray-700 pb-3 mb-4 shrink-0">
+        <div>
+          <h2 id="modal-date-title" class="text-2xl md:text-3xl font-black text-[#FFE600]">
+            DÉTAILS DU JOUR
+          </h2>
+          <p id="modal-holiday-subtitle" class="text-lg font-bold text-[#FF77FF] mt-1 hidden"></p>
+        </div>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-white text-4xl font-bold px-3">
+          &times;
+        </button>
+      </div>
+
+      <!-- Formulaire d'ajout rapide -->
+      <form id="event-form" onsubmit="saveEvent(event)" class="bg-gray-800 p-4 rounded-xl border border-gray-700 mb-4 shrink-0">
+        <input type="hidden" id="event-id">
+        <div class="flex flex-col md:flex-row gap-3">
+          <input type="time" id="event-time" required class="bg-black text-white text-xl font-bold p-3 rounded-lg border border-[#00E5FF] focus:outline-none">
+          <input type="text" id="event-title" placeholder="Rendez-vous (ex: Docteur, Coiffeur...)" required class="flex-1 bg-black text-white text-xl p-3 rounded-lg border border-[#00E5FF] focus:outline-none placeholder-gray-500">
+          <button type="submit" class="bg-[#00FF66] hover:bg-green-400 text-black font-black text-xl px-6 py-3 rounded-lg transition-colors">
+            AJOUTER
+          </button>
+        </div>
+      </form>
+
+      <!-- Liste des RDV du jour -->
+      <div id="modal-events-list" class="flex-1 overflow-y-auto no-scrollbar space-y-3 pr-1">
+        <!-- Liste dynamique -->
+      </div>
+
+      <!-- Bouton Fermer -->
+      <button onclick="closeModal()" class="mt-4 w-full bg-gray-700 hover:bg-gray-600 text-white font-black text-xl py-3 rounded-xl border border-gray-500 shrink-0">
+        FERMER
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Configuration Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCtmpZN1TRazThpnXd3VQIiX5ZkUv_yDY8",
+      authDomain: "agenda-mensuel-connecte.firebaseapp.com",
+      databaseURL: "https://agenda-mensuel-connecte-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "agenda-mensuel-connecte",
+      storageBucket: "agenda-mensuel-connecte.firebasestorage.app",
+      messagingSenderId: "303987129376",
+      appId: "1:303987129376:web:217c9c459018634b525045"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const eventsRef = db.ref('senior_agenda_events');
+
+    let currentDate = new Date();
+    let selectedDateStr = "";
+    let events = {};
+
+    const monthNames = [
+      "JANVIER", "FÉVRIER", "MARS", "AVRIL", "MAI", "JUIN",
+      "JUILLET", "AOÛT", "SEPTEMBRE", "OCTOBRE", "NOVEMBRE", "DÉCEMBRE"
+    ];
+
+    eventsRef.on('value', (snapshot) => {
+      events = snapshot.val() || {};
+      renderCalendar();
+      if (!document.getElementById('day-modal').classList.contains('hidden') && selectedDateStr) {
+        renderModalEvents();
+      }
+    });
+
+    function getEasterDate(year) {
+      const a = year % 19;
+      const b = Math.floor(year / 100);
+      const c = year % 100;
+      const d = Math.floor(b / 4);
+      const e = b % 4;
+      const f = Math.floor((b + 8) / 25);
+      const g = Math.floor((b - f + 1) / 3);
+      const h = (19 * a + b - d - g + 15) % 30;
+      const i = Math.floor(c / 4);
+      const k = c % 4;
+      const l = (32 + 2 * e + 2 * i - h - k) % 7;
+      const m = Math.floor((a + 11 * h + 22 * l) / 451);
+      const month = Math.floor((h + l - 7 * m + 114) / 31) - 1;
+      const day = ((h + l - 7 * m + 114) % 31) + 1;
+      return new Date(year, month, day);
+    }
+
+    function getFrenchHolidays(year) {
+      const holidays = {
+        [`${year}-01-01`]: "Jour de l'An",
+        [`${year}-05-01`]: "Fête du Travail",
+        [`${year}-05-08`]: "Victoire 1945",
+        [`${year}-07-14`]: "Fête Nationale",
+        [`${year}-08-15`]: "Assomption",
+        [`${year}-11-01`]: "Toussaint",
+        [`${year}-11-11`]: "Armistice 1918",
+        [`${year}-12-25`]: "Noël"
+      };
+
+      const easter = getEasterDate(year);
+      
+      const easterMonday = new Date(easter);
+      easterMonday.setDate(easter.getDate() + 1);
+      holidays[formatDateKey(easterMonday)] = "Lundi de Pâques";
+
+      const ascension = new Date(easter);
+      ascension.setDate(easter.getDate() + 39);
+      holidays[formatDateKey(ascension)] = "Ascension";
+
+      const pentecostMonday = new Date(easter);
+      pentecostMonday.setDate(easter.getDate() + 50);
+      holidays[formatDateKey(pentecostMonday)] = "Lundi de Pentecôte";
+
+      return holidays;
+    }
+
+    function formatDateKey(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function renderCalendar() {
+      const grid = document.getElementById('calendar-grid');
+      grid.innerHTML = '';
+
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+
+      document.getElementById('current-month-title').innerText = `${monthNames[month]} ${year}`;
+
+      const holidays = getFrenchHolidays(year);
+
+      const firstDayOfMonth = new Date(year, month, 1);
+      let startingDay = firstDayOfMonth.getDay() - 1; 
+      if (startingDay === -1) startingDay = 6;
+
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const totalCells = startingDay + daysInMonth;
+      const numRows = totalCells > 35 ? 6 : 5;
+
+      grid.className = `grid-month gap-1 h-full w-full grid-rows-${numRows}`;
+
+      const today = new Date();
+      const todayStr = formatDateKey(today);
+
+      for (let i = 0; i < startingDay; i++) {
+        const emptyCell = document.createElement('div');
+        emptyCell.className = "bg-gray-950/40 rounded-lg border border-gray-900";
+        grid.appendChild(emptyCell);
+      }
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const isToday = (dateStr === todayStr);
+        const holidayName = holidays[dateStr];
+
+        const dayCell = document.createElement('div');
+        dayCell.onclick = () => openDayModal(dateStr, day, holidayName);
+        
+        let borderStyle = 'border-gray-800 hover:border-[#00E5FF]';
+        let bgStyle = 'bg-gray-900';
+
+        if (isToday) {
+          borderStyle = 'border-[#FF0055]';
+          bgStyle = 'bg-red-950/20';
+        } else if (holidayName) {
+          borderStyle = 'border-[#FF77FF]';
+          bgStyle = 'bg-purple-950/30';
+        }
+
+        dayCell.className = `rounded-lg p-2 border-2 cursor-pointer flex flex-col justify-between transition-colors overflow-hidden ${bgStyle} ${borderStyle}`;
+
+        // En-tête de la case (Numéro du jour + Férié éventuel)
+        const dayHeader = document.createElement('div');
+        dayHeader.className = "flex justify-between items-start";
+        
+        let numberClasses = "text-xl md:text-2xl font-black ";
+        if (isToday) {
+          numberClasses += "text-[#FF0055] bg-white px-2 rounded-md";
+        } else if (holidayName) {
+          numberClasses += "text-[#FF77FF]";
+        } else {
+          numberClasses += "text-white";
+        }
+
+        let headerHTML = `<span class="${numberClasses}">${day}</span>`;
+        dayHeader.innerHTML = headerHTML;
+        dayCell.appendChild(dayHeader);
+
+        if (holidayName) {
+          const holSpan = document.createElement('div');
+          holSpan.className = "text-[10px] md:text-xs font-bold text-[#FF77FF] truncate uppercase tracking-tight";
+          holSpan.innerText = holidayName;
+          dayCell.appendChild(holSpan);
+        }
+
+        // Affichage du compteur élégant (Petit chiffre encadré s'il y a des RDV)
+        const dayEvents = events[dateStr] || [];
+        const footerContainer = document.createElement('div');
+        footerContainer.className = "flex justify-end mt-auto";
+
+        if (dayEvents.length > 0) {
+          const badge = document.createElement('div');
+          badge.className = "bg-[#00E5FF] text-black font-black text-sm md:text-base px-2.5 py-0.5 rounded-lg shadow-md";
+          badge.innerText = `${dayEvents.length} RDV`;
+          footerContainer.appendChild(badge);
+        }
+
+        dayCell.appendChild(footerContainer);
+        grid.appendChild(dayCell);
+      }
+    }
+
+    function openDayModal(dateStr, dayNum, holidayName) {
+      selectedDateStr = dateStr;
+      const monthStr = monthNames[currentDate.getMonth()];
+      document.getElementById('modal-date-title').innerText = `JOURNÉE DU ${dayNum} ${monthStr}`;
+      
+      const holidaySub = document.getElementById('modal-holiday-subtitle');
+      if (holidayName) {
+        holidaySub.innerText = `★ ${holidayName.toUpperCase()} ★`;
+        holidaySub.classList.remove('hidden');
+      } else {
+        holidaySub.classList.add('hidden');
+      }
+
+      renderModalEvents();
+      document.getElementById('day-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('day-modal').classList.add('hidden');
+      document.getElementById('event-form').reset();
+    }
+
+    function renderModalEvents() {
+      const list = document.getElementById('modal-events-list');
+      list.innerHTML = '';
+      const dayEvents = events[selectedDateStr] || [];
+
+      if (dayEvents.length === 0) {
+        list.innerHTML = `<p class="text-gray-400 text-xl text-center py-4">Aucun rendez-vous pour cette journée.</p>`;
+        return;
+      }
+
+      dayEvents.sort((a, b) => a.time.localeCompare(b.time));
+
+      dayEvents.forEach((evt, idx) => {
+        const item = document.createElement('div');
+        item.className = "flex items-center justify-between bg-black p-3 rounded-xl border border-gray-700";
+        item.innerHTML = `
+          <div class="flex items-center gap-3">
+            <span class="text-[#00FF66] font-black text-2xl">${evt.time}</span>
+            <span class="text-white font-bold text-xl">${evt.title}</span>
+          </div>
+          <button onclick="deleteEvent(${idx})" class="bg-red-600 hover:bg-red-700 text-white font-bold text-lg px-4 py-2 rounded-lg">
+            SUPPRIMER
+          </button>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    function saveEvent(e) {
+      e.preventDefault();
+      const time = document.getElementById('event-time').value;
+      const title = document.getElementById('event-title').value.trim();
+
+      if (!time || !title) return;
+
+      if (!events[selectedDateStr]) events[selectedDateStr] = [];
+      events[selectedDateStr].push({ time, title });
+      
+      eventsRef.set(events);
+      document.getElementById('event-form').reset();
+    }
+
+    function deleteEvent(idx) {
+      events[selectedDateStr].splice(idx, 1);
+      if (events[selectedDateStr].length === 0) delete events[selectedDateStr];
+      eventsRef.set(events);
+    }
+
+    function changeMonth(delta) {
+      currentDate.setMonth(currentDate.getMonth() + delta);
+      renderCalendar();
+    }
+
+    function goToToday() {
+      currentDate = new Date();
+      renderCalendar();
+    }
+
+    renderCalendar();
+	// Enregistrement du Service Worker pour la PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then((reg) => console.log('Service Worker enregistré avec succès !', reg.scope))
+          .catch((err) => console.log('Erreur Service Worker :', err));
+      });
+    }
+  </script>
+</body>
+</html>
