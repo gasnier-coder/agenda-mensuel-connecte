@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agenda Senior - GASNIER TECH</title>
+  <title>Agenda mensuel connecte - GASNIER TECH</title>
   
   <!-- Liaison PWA Manifest & Icônes -->
   <link rel="manifest" href="manifest.json">
@@ -139,27 +139,6 @@
     </div>
   </div>
 
-  <!-- Modale de Confirmation avec le Code 324 -->
-  <div id="pin-modal" class="fixed inset-0 bg-black/95 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-gray-900 border-4 border-[#FF0055] rounded-2xl w-full max-w-md p-6 shadow-2xl text-center">
-      <h3 class="text-2xl font-black text-[#FFE600] mb-2">CONFIRMATION REQUISE</h3>
-      <p class="text-gray-300 mb-6 text-lg">Entrez le code de sécurité (<span class="text-[#00FF66] font-bold">324</span>) pour valider :</p>
-      
-      <div class="flex justify-center gap-3 mb-6">
-        <input type="password" id="pin-input" maxlength="3" class="w-40 bg-black text-center text-white text-3xl font-black tracking-widest p-3 rounded-xl border-2 border-[#00E5FF] focus:outline-none" placeholder="---">
-      </div>
-
-      <div class="flex gap-4">
-        <button onclick="closePinModal()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold text-xl py-3 rounded-xl">
-          ANNULER
-        </button>
-        <button onclick="validatePinAction()" class="flex-1 bg-[#FF0055] hover:bg-red-600 text-white font-black text-xl py-3 rounded-xl">
-          VALIDER
-        </button>
-      </div>
-    </div>
-  </div>
-
   <script>
     // Configuration Firebase
     const firebaseConfig = {
@@ -179,7 +158,6 @@
     let currentDate = new Date();
     let selectedDateStr = "";
     let events = {};
-    let pendingAction = null; // Stocke l'action en attente de code PIN
 
     const monthNames = [
       "JANVIER", "FÉVRIER", "MARS", "AVRIL", "MAI", "JUIN",
@@ -319,7 +297,7 @@
 
         if (holidayName) {
           const holSpan = document.createElement('div');
-          holSpan.className = "text-[9px] md:text-[7px] font-bold text-[#FF77FF] leading-tight uppercase z-10 mt-0.5";
+          holSpan.className = "text-[9px] md:text-[10px] font-bold text-[#FF77FF] leading-tight uppercase z-10 mt-0.5";
           holSpan.innerText = holidayName;
           dayCell.appendChild(holSpan);
         }
@@ -384,7 +362,7 @@
             <span class="text-[#00FF66] font-black text-2xl">${evt.time}</span>
             <span class="text-white font-bold text-xl">${evt.title}</span>
           </div>
-          <button onclick="requestPinForDelete(${idx})" class="bg-red-600 hover:bg-red-700 text-white font-bold text-lg px-4 py-2 rounded-lg">
+          <button onclick="confirmAndDelete(${idx})" class="bg-red-600 hover:bg-red-700 text-white font-bold text-lg px-4 py-2 rounded-lg">
             SUPPRIMER
           </button>
         `;
@@ -399,51 +377,22 @@
 
       if (!time || !title) return;
 
-      // Demande du code PIN (324) avant d'enregistrer un rdv
-      pendingAction = () => {
+      // Demande de confirmation simple avant l'ajout
+      if (confirm(`Voulez-vous vraiment ajouter le rendez-vous "${title}" à ${time} ?`)) {
         if (!events[selectedDateStr]) events[selectedDateStr] = [];
         events[selectedDateStr].push({ time, title });
+        
         eventsRef.set(events);
         document.getElementById('event-form').reset();
-      };
-
-      openPinModal();
+      }
     }
 
-    function requestPinForDelete(idx) {
-      // Demande du code PIN (324) avant de supprimer un rdv
-      pendingAction = () => {
+    function confirmAndDelete(idx) {
+      // Demande de confirmation simple avant la suppression
+      if (confirm("Voulez-vous vraiment supprimer ce rendez-vous ?")) {
         events[selectedDateStr].splice(idx, 1);
         if (events[selectedDateStr].length === 0) delete events[selectedDateStr];
         eventsRef.set(events);
-      };
-
-      openPinModal();
-    }
-
-    function openPinModal() {
-      document.getElementById('pin-input').value = "";
-      document.getElementById('pin-modal').classList.remove('hidden');
-      setTimeout(() => document.getElementById('pin-input').focus(), 100);
-    }
-
-    function closePinModal() {
-      document.getElementById('pin-modal').classList.add('hidden');
-      pendingAction = null;
-    }
-
-    function validatePinAction() {
-      const pin = document.getElementById('pin-input').value;
-      if (pin === "324") {
-        closePinModal();
-        if (pendingAction) {
-          pendingAction();
-          pendingAction = null;
-        }
-      } else {
-        alert("Code incorrect ! Entrez 324.");
-        document.getElementById('pin-input').value = "";
-        document.getElementById('pin-input').focus();
       }
     }
 

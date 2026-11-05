@@ -1,4 +1,4 @@
-const CACHE_NAME = 'agenda-senior-v1';
+const CACHE_NAME = 'Agenda mensuel connecte';
 const urlsToCache = [
   './index.html',
   './manifest.json'
