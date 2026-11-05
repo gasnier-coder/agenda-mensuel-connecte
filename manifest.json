@@ -1,6 +1,6 @@
 {
-  "name": "Agenda mensuel connecte - GASNIER TECH",
-  "short_name": "Agenda Senior",
+  "name": "Agenda mensuel- GASNIER TECH",
+  "short_name": "Agenda mensuel connecte",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#121212",
