@@ -43,45 +43,66 @@
     /* Utilitaires visuels */
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Style spécifique pour l'impression propre du mois */
+    @media print {
+      body {
+        background-color: #121212 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        height: auto !important;
+        overflow: visible !important;
+      }
+      header, .no-print {
+        display: none !important;
+      }
+      main {
+        height: auto !important;
+      }
+    }
   </style>
 </head>
-<body class="flex flex-col h-screen overflow-hidden p-2">
+<body class="flex flex-col h-screen overflow-hidden p-1.5">
 
-  <!-- En-tête (Header) avec ton Logo -->
-  <header class="flex items-center justify-between bg-black/70 border-2 border-[#00E5FF] rounded-xl px-4 py-2 mb-2 shrink-0">
+  <!-- En-tête (Header) compact avec ton Logo -->
+  <header class="flex items-center justify-between bg-black/70 border-2 border-[#00E5FF] rounded-xl px-3 py-1 mb-1.5 shrink-0">
     
     <!-- Zone Logo -->
-    <div class="flex items-center gap-4">
-      <div class="border-2 border-[#00FF66] bg-black px-2 py-1 rounded-lg flex items-center justify-center shadow-[0_0_10px_rgba(0,255,102,0.3)] h-12">
-        <img src="logo.png" alt="GASNIER TECH" class="max-h-10 object-contain" onerror="this.style.display='none'; document.getElementById('fallback-logo').style.display='flex';">
+    <div class="flex items-center gap-3">
+      <div class="border-2 border-[#00FF66] bg-black px-2 py-0.5 rounded-lg flex items-center justify-center shadow-[0_0_10px_rgba(0,255,102,0.3)] h-10">
+        <img src="logo.png" alt="GASNIER TECH" class="max-h-8 object-contain" onerror="this.style.display='none'; document.getElementById('fallback-logo').style.display='flex';">
         <div id="fallback-logo" class="hidden flex-col justify-center items-center px-2">
-          <span class="text-sm font-black text-[#00FF66] tracking-widest leading-none">GASNIER</span>
-          <span class="text-[10px] font-bold text-[#00E5FF] tracking-widest leading-none mt-1">TECH</span>
+          <span class="text-xs font-black text-[#00FF66] tracking-widest leading-none">GASNIER</span>
+          <span class="text-[9px] font-bold text-[#00E5FF] tracking-widest leading-none mt-0.5">TECH</span>
         </div>
       </div>
-      <h1 class="text-2xl md:text-3xl font-extrabold text-[#00FF66] tracking-wide" id="current-month-title">
+      <h1 class="text-xl md:text-2xl font-extrabold text-[#00FF66] tracking-wide" id="current-month-title">
         CHARGEMENT...
       </h1>
     </div>
 
-    <!-- Navigation & Bouton Aujourd'hui -->
-    <div class="flex items-center gap-2 md:gap-4">
-      <button onclick="changeMonth(-1)" class="bg-gray-800 hover:bg-gray-700 text-[#00E5FF] border-2 border-[#00E5FF] text-xl md:text-2xl font-black px-4 py-1.5 rounded-xl active:scale-95 transition-transform">
-        &#9664; MOIS PRÉCÉDENT
+    <!-- Navigation, Impression & Bouton Aujourd'hui -->
+    <div class="flex items-center gap-2">
+      <button onclick="changeMonth(-1)" class="bg-gray-800 hover:bg-gray-700 text-[#00E5FF] border-2 border-[#00E5FF] text-base md:text-lg font-black px-3 py-1 rounded-xl active:scale-95 transition-transform">
+        &#9664; PRÉCÉDENT
       </button>
       
-      <button onclick="goToToday()" class="bg-[#FF0055] hover:bg-red-600 text-white font-black text-lg md:text-xl px-5 py-2 rounded-xl shadow-lg border-2 border-white active:scale-95 transition-transform">
+      <button onclick="goToToday()" class="bg-[#FF0055] hover:bg-red-600 text-white font-black text-base md:text-lg px-3 py-1.5 rounded-xl shadow-lg border-2 border-white active:scale-95 transition-transform">
         AUJOURD'HUI
       </button>
 
-      <button onclick="changeMonth(1)" class="bg-gray-800 hover:bg-gray-700 text-[#00E5FF] border-2 border-[#00E5FF] text-xl md:text-2xl font-black px-4 py-1.5 rounded-xl active:scale-95 transition-transform">
-        MOIS SUIVANT &#9654;
+      <button onclick="changeMonth(1)" class="bg-gray-800 hover:bg-gray-700 text-[#00E5FF] border-2 border-[#00E5FF] text-base md:text-lg font-black px-3 py-1 rounded-xl active:scale-95 transition-transform">
+        SUIVANT &#9654;
+      </button>
+
+      <button onclick="window.print()" class="bg-[#1EA647] hover:bg-green-600 text-white font-black text-base md:text-lg px-3 py-1.5 rounded-xl shadow-lg border-2 border-white active:scale-95 transition-transform ml-1">
+        🖨️ IMPRIMER
       </button>
     </div>
   </header>
 
   <!-- En-tête des jours de la semaine -->
-  <div class="grid grid-cols-7 gap-1 text-center font-black text-lg md:text-xl text-[#FFE600] bg-gray-900 py-1.5 rounded-lg border border-gray-800 mb-1 shrink-0">
+  <div class="grid grid-cols-7 gap-1 text-center font-black text-base md:text-lg text-[#FFE600] bg-gray-900 py-1 rounded-lg border border-gray-800 mb-1 shrink-0">
     <div>LUN</div>
     <div>MAR</div>
     <div>MER</div>
@@ -277,44 +298,62 @@
           bgStyle = 'bg-purple-950/30';
         }
 
-        dayCell.className = `rounded-lg p-2 border-2 cursor-pointer flex flex-col justify-between transition-colors overflow-hidden relative ${bgStyle} ${borderStyle}`;
+        /* Espacement interne serré pour que tout tienne à 100% de zoom */
+        dayCell.className = `rounded-lg p-1 border-2 cursor-pointer flex flex-col justify-start transition-colors overflow-hidden relative ${bgStyle} ${borderStyle}`;
 
-        // En-tête de la case (Numéro du jour)
-        const dayHeader = document.createElement('div');
-        dayHeader.className = "flex justify-between items-start z-10";
-        
-        let numberClasses = "text-xl md:text-2xl font-black ";
+        // En-tête de la case (Numéro du jour + Jour férié sur la même ligne si possible)
+        const headerContainer = document.createElement('div');
+        headerContainer.className = "flex items-center justify-between shrink-0 mb-0.5 gap-1";
+
+        let numberClasses = "text-sm md:text-base font-black leading-none ";
         if (isToday) {
-          numberClasses += "text-[#FF0055] bg-white px-2 rounded-md";
+          numberClasses += "text-[#FF0055] bg-white px-1.5 py-0.5 rounded-md";
         } else if (holidayName) {
           numberClasses += "text-[#FF77FF]";
         } else {
           numberClasses += "text-white";
         }
 
-        dayHeader.innerHTML = `<span class="${numberClasses}">${day}</span>`;
-        dayCell.appendChild(dayHeader);
+        headerContainer.innerHTML = `<span class="${numberClasses}">${day}</span>`;
 
         if (holidayName) {
-          const holSpan = document.createElement('div');
-          holSpan.className = "text-[9px] md:text-[10px] font-bold text-[#FF77FF] leading-tight uppercase z-10 mt-0.5";
+          const holSpan = document.createElement('span');
+          holSpan.className = "text-[9px] font-bold text-[#FF77FF] leading-none uppercase truncate text-right";
           holSpan.innerText = holidayName;
-          dayCell.appendChild(holSpan);
+          headerContainer.appendChild(holSpan);
         }
 
-        // Compteur de RDV en rouge (#86E386), texte blanc pour un max de contraste, strictement centré
+        dayCell.appendChild(headerContainer);
+
+        // Affichage direct des rendez-vous (Heure en rose #FF77FF, Annotation en cyan #00E5FF)
         const dayEvents = events[dateStr] || [];
         if (dayEvents.length > 0) {
-          const centerContainer = document.createElement('div');
-          centerContainer.className = "absolute inset-0 flex items-center justify-center pointer-events-none z-0";
+          dayEvents.sort((a, b) => a.time.localeCompare(b.time));
 
-          const badge = document.createElement('div');
-          badge.className = "text-black font-black text-xs md:text-sm px-2.5 py-0.5 rounded-md shadow-md border border-white/20";
-          badge.style.backgroundColor = "#86E386";
-          badge.innerText = `${dayEvents.length} RDV`;
-          
-          centerContainer.appendChild(badge);
-          dayCell.appendChild(centerContainer);
+          const eventsContainer = document.createElement('div');
+          eventsContainer.className = "flex flex-col justify-around overflow-hidden flex-1";
+
+          dayEvents.slice(0, 2).forEach(evt => {
+            const evtBlock = document.createElement('div');
+            evtBlock.className = "flex flex-col leading-none";
+            
+            const formattedTime = evt.time.replace(':', 'h');
+
+            evtBlock.innerHTML = `
+              <span class="text-[#FF77FF] font-bold text-[11px] md:text-xs truncate">${formattedTime}</span>
+              <span class="text-[#00E5FF] font-semibold text-[11px] md:text-xs truncate">${evt.title}</span>
+            `;
+            eventsContainer.appendChild(evtBlock);
+          });
+
+          if (dayEvents.length > 2) {
+            const moreSpan = document.createElement('div');
+            moreSpan.className = "text-[9px] text-gray-400 font-bold italic leading-none";
+            moreSpan.innerText = `+${dayEvents.length - 2} autre(s)...`;
+            eventsContainer.appendChild(moreSpan);
+          }
+
+          dayCell.appendChild(eventsContainer);
         }
 
         grid.appendChild(dayCell);
@@ -360,7 +399,7 @@
         item.className = "flex items-center justify-between bg-black p-3 rounded-xl border border-gray-700";
         item.innerHTML = `
           <div class="flex items-center gap-3">
-            <span class="text-[#00FF66] font-black text-2xl">${evt.time}</span>
+            <span class="text-[#00FF66] font-black text-2xl">${evt.time.replace(':', 'h')}</span>
             <span class="text-white font-bold text-xl">${evt.title}</span>
           </div>
           <button onclick="confirmAndDelete(${idx})" class="bg-red-600 hover:bg-red-700 text-white font-bold text-lg px-4 py-2 rounded-lg">
@@ -378,7 +417,7 @@
 
       if (!time || !title) return;
 
-      if (confirm(`Voulez-vous vraiment ajouter le rendez-vous "${title}" à ${time} ?`)) {
+      if (confirm(`Voulez-vous vraiment ajouter le rendez-vous "${title}" à ${time.replace(':', 'h')} ?`)) {
         if (!events[selectedDateStr]) events[selectedDateStr] = [];
         events[selectedDateStr].push({ time, title });
         
